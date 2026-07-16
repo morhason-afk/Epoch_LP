@@ -84,7 +84,7 @@ fbq('init','1587958412941986');fbq('track','PageView');
           <div style="font-size:10px;letter-spacing:0.26em;text-transform:uppercase;font-weight:600;color:var(--accent);">Early Access</div>
           <input type="email" class="hero-email" placeholder="Your email address" autocomplete="email" required>
           <button type="submit" class="cta-btn">Get Early Access</button>
-          <div class="error-msg hero-error">Please enter a valid email address.</div>
+          <div class="error-msg hero-error">Enter a real, working email address.</div>
           <div style="font-size:11.5px;color:rgba(244,241,234,0.42);line-height:1.45;">No spam. One email — the day Epoch goes live.</div>
         </form>
 
@@ -178,7 +178,7 @@ fbq('init','1587958412941986');fbq('track','PageView');
       <form class="step active" data-step="email" style="flex-direction:column;gap:11px;" onsubmit="return epochSubmitEmail(event)">
         <input type="email" class="cta-email" placeholder="Your email address" autocomplete="email" required>
         <button type="submit" class="cta-btn">Get Early Access</button>
-        <div class="error-msg cta-error">Please enter a valid email address.</div>
+        <div class="error-msg cta-error">Enter a real, working email address.</div>
       </form>
       <div class="step" data-step="pick" style="font-size:13.5px;color:rgba(244,241,234,0.7);line-height:1.5;">Almost there — pick your first story above to lock in your spot.</div>
       <div class="step" data-step="done" style="align-items:center;gap:11px;">
@@ -225,7 +225,31 @@ fbq('init','1587958412941986');fbq('track','PageView');
     });
   }
 
-  function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v||'').trim()); }
+  var DISPOSABLE_DOMAINS = ['mailinator.com','tempmail.com','temp-mail.org','guerrillamail.com','guerrillamail.info','10minutemail.com','10minutemail.net','yopmail.com','trashmail.com','fakeinbox.com','getnada.com','throwawaymail.com','maildrop.cc','sharklasers.com','dispostable.com','mailnesia.com','discard.email','mintemail.com','mytemp.email','tempinbox.com','spamgourmet.com','moakt.com','emailondeck.com','test.com','example.com'];
+
+  var VALID_TLDS = ['com','net','org','edu','gov','mil','co','io','us','uk','ca','au','nz','ie','info','biz','me','tv','app','dev','ai','de','fr','es','it','nl','se','no','dk','fi','pl','pt','ch','at','be','in','jp','cn','kr','sg','hk','br','mx','ar','za','ru','xyz'];
+
+  function isValidEmail(v){
+    var email = (v||'').trim().toLowerCase();
+    var re = /^[a-z0-9](?:[a-z0-9._%+-]*[a-z0-9])?@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
+    if (!re.test(email)) return false;
+    if (email.indexOf('..') !== -1) return false;
+
+    var parts = email.split('@');
+    var local = parts[0];
+    var domain = parts[1];
+    var domainLabels = domain.split('.');
+    var tld = domainLabels[domainLabels.length - 1];
+
+    if (VALID_TLDS.indexOf(tld) === -1) return false;
+    if (DISPOSABLE_DOMAINS.indexOf(domain) !== -1) return false;
+    if (local.length < 2) return false;
+    if (/^(.)\1{3,}$/.test(local)) return false;
+    var junkWords = ['test','asdf','asdfg','qwerty','fake','none','noemail','noone','nobody','xxx','yyy','zzz','foobar','sample','example','admin'];
+    if (junkWords.indexOf(local) !== -1) return false;
+
+    return true;
+  }
 
   window.epochSubmitEmail = function(e){
     e.preventDefault();
