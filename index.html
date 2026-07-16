@@ -242,6 +242,14 @@ fbq('init','1587958412941986');fbq('track','PageView');
     // sync both email inputs
     document.querySelectorAll('input[type="email"]').forEach(function(i){ i.value = value; });
     try { if (window.fbq) window.fbq('track', 'Lead'); } catch(err) {}
+
+    // Submit to Netlify Forms so this shows up under Forms > epoch-waitlist
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ 'form-name': 'epoch-waitlist', email: value }).toString()
+    }).catch(function(err){ console.error('[epoch] lead submission failed:', err); });
+
     setStep('pick');
     return false;
   };
@@ -256,5 +264,6 @@ fbq('init','1587958412941986');fbq('track','PageView');
 
   setStep('email');
 </script>
+<form name="epoch-waitlist" data-netlify="true" netlify-honeypot="bot-field" hidden><input type="email" name="email"></form>
 </body>
 </html>
