@@ -1,0 +1,28 @@
+(function(){
+const state={arm:null,answer:null,priceCell:null,price:null,episode:1,sessionId:crypto.randomUUID?crypto.randomUUID():String(Date.now()),startedAt:Date.now(),marks:{}};
+const params=new URLSearchParams(location.search);const saved=localStorage.getItem('epoch_arm');
+state.arm=params.get('arm')||saved||(Math.random()<.7?'paywall':'free');localStorage.setItem('epoch_arm',state.arm);const savedPrice=localStorage.getItem('epoch_price_cell');state.priceCell=params.get('price_cell')||savedPrice||(Math.random()<.5?'14.99':'19.99');state.price=state.priceCell;localStorage.setItem('epoch_price_cell',state.priceCell);
+const utm={};['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ttclid'].forEach(k=>{const live=params.get(k);if(live)localStorage.setItem('epoch_'+k,live);utm[k]=live||localStorage.getItem('epoch_'+k)||''});
+function tiktokTrack(eventName,payload){if(window.ttq?.track)window.ttq.track(eventName,payload)}
+function emit(name,props={}){const payload={event:name,ts:new Date().toISOString(),session_id:state.sessionId,arm:state.arm,price_cell:state.priceCell,episode:state.episode,...utm,...props};
+ window.dataLayer=window.dataLayer||[];window.dataLayer.push(payload);if(window.clarity)window.clarity('event',name,payload);if(window.w2w?.logEvent)window.w2w.logEvent(name,payload);
+ if(name==='funnel_view'&&(payload.screen==='landing'||payload.screen==='quiz'||payload.screen==='player'))tiktokTrack('ViewContent',{...payload,content_id:payload.screen,content_type:'product'});
+ if(name==='quiz_complete')tiktokTrack('ClickButton',{...payload,content_id:'quiz_complete',content_type:'product'});
+ if(name==='funnel_view'&&payload.screen==='paywall'){tiktokTrack('InitiateCheckout',{...payload,content_id:'founding_access',content_type:'product',currency:'USD',value:Number(state.price)});tiktokTrack('PriceCellView',{...payload,content_id:'founding_access',content_type:'product',currency:'USD',value:Number(state.price)})}
+ if(name==='founding_email_submit'){tiktokTrack('SubmitForm',{...payload,content_id:'founding_email',content_type:'product',currency:'USD',value:Number(state.price)});tiktokTrack('Lead',{...payload,content_id:'founding_email',content_type:'product',currency:'USD',value:Number(state.price)})}
+ if(name==='episode_start'||name==='episode_progress'||name==='next_episode_start'||name==='episode_replay'||name==='series_complete')tiktokTrack(name,{...payload,content_id:'episode_'+state.episode,content_type:'product'});
+ console.info('[epoch-event]',payload)}
+function go(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');scrollTo(0,0);emit('funnel_view',{screen:id})}
+window.addEventListener('DOMContentLoaded',()=>{document.getElementById('assignedPriceAmount').textContent='$'+state.price;document.getElementById('anchorPriceAmount').textContent=state.priceCell==='14.99'?'$19.99':'$24.99';document.getElementById('formPrice').value=state.price;if(params.get('screen')&&document.getElementById(params.get('screen')))go(params.get('screen'));emit('session_start',{landing_url:location.href,referrer:document.referrer});if(!params.get('screen'))emit('funnel_view',{screen:'landing'});emit('arm_assigned');if(state.arm==='paywall')emit('price_cell_assigned',{price_usd:state.price});
+ document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+ document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{state.answer=b.dataset.answer;document.getElementById('formAnswer').value=state.answer;emit('quiz_complete',{answer:state.answer});go(state.arm==='paywall'?'paywall':'free')});
+ document.getElementById('formArm').value=state.arm;
+ document.getElementById('foundingForm').onsubmit=e=>{e.preventDefault();const f=e.target;const body=new URLSearchParams(new FormData(f));emit('founding_email_submit',{price_usd:state.price});fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(()=>emit('founding_email_success')).catch(()=>emit('founding_email_error'));go('founding')};
+ const v=document.getElementById('video');v.addEventListener('loadedmetadata',()=>document.getElementById('missingVideo').style.display='none');
+ v.addEventListener('play',()=>{if(!state.marks[state.episode+'_start']){state.marks[state.episode+'_start']=1;emit('episode_start')}});
+ v.addEventListener('timeupdate',()=>{if(!v.duration)return;[25,50,75,100].forEach(p=>{const key=state.episode+'_'+p;if(!state.marks[key]&&v.currentTime/v.duration*100>=p){state.marks[key]=1;emit('episode_progress',{percent:p})}})});
+ document.getElementById('replay').onclick=()=>{v.currentTime=0;v.play();emit('episode_replay')};document.getElementById('next').onclick=next;
+ window.addEventListener('pagehide',()=>{const payload={event:'session_end',session_id:state.sessionId,duration_seconds:Math.round((Date.now()-state.startedAt)/1000),arm:state.arm};navigator.sendBeacon?.('/.netlify/functions/events',JSON.stringify(payload));emit('session_end',{duration_seconds:payload.duration_seconds})});
+});
+function next(){if(state.episode>=3){emit('series_complete');go('founding');return}emit('next_episode_start',{from_episode:state.episode,to_episode:state.episode+1});state.episode++;document.getElementById('episodeLabel').textContent='EPISODE '+state.episode+' OF 3';document.getElementById('missingVideo').querySelector('b').textContent='EPISODE '+state.episode+' PLACEHOLDER';document.querySelectorAll('#episodes li').forEach((x,i)=>x.classList.toggle('current',i===state.episode-1));emit('episode_start',{source:'next_button'})}
+})();
