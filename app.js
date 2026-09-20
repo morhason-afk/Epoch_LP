@@ -25,7 +25,18 @@ function shell(body){const pct=Math.round((state.step-1)/(TOTAL-1)*100);app.inne
 function showFeedback(message,next){
  document.querySelectorAll('.option').forEach(b=>b.disabled=true);
  document.body.insertAdjacentHTML('beforeend',`<div class="feedback-overlay" role="status"><div class="feedback-card"><span class="feedback-check">✓</span><p>${message}</p><div class="feedback-timer"><i></i></div></div></div>`);
- setTimeout(next,2200)
+ const overlay=document.querySelector('.feedback-overlay:last-of-type'),bar=overlay.querySelector('.feedback-timer i'),started=performance.now();
+ let advanced=false,timer,watchdog;
+ const cleanup=()=>{clearTimeout(timer);clearInterval(watchdog);document.removeEventListener('visibilitychange',resume);window.removeEventListener('pageshow',resume);overlay.remove()};
+ const advance=()=>{if(advanced)return;advanced=true;cleanup();next()};
+ const resume=()=>{if(performance.now()-started>=1200)advance()};
+ const frame=now=>{if(advanced)return;if(now-started>=1200)advance();else requestAnimationFrame(frame)};
+ bar.addEventListener('animationend',advance,{once:true});
+ document.addEventListener('visibilitychange',resume);
+ window.addEventListener('pageshow',resume);
+ timer=setTimeout(advance,1200);
+ watchdog=setInterval(resume,250);
+ requestAnimationFrame(frame)
 }
 function selectQ(step,value){const q=data[step];if(q.multi){let a=state.answers[q.key]||[];a=a.includes(value)?a.filter(x=>x!==value):a.length<q.max?[...a,value]:a;state.answers[q.key]=a;render();return}state.answers[q.key]=value;const o=q.opts.find(x=>x[0]===value);document.querySelector(`[data-v="${value}"]`)?.classList.add('chosen');track('EPOCHQuestionAnswer',{question:q.key,answer:value});showFeedback(o[2],()=>{state.step++;render()})}
 function question(){const q=data[state.step],chosen=state.answers[q.key]||[];shell(`<div class="content question-content"><p class="eyebrow">YOUR EPOCH PREMIERE</p><h1>${q.title}</h1><div class="screen-visual" style="background-image:linear-gradient(0deg,rgba(5,5,6,.66),rgba(5,5,6,.03)),url('${art(state.step)}')"></div>${q.multi?'<p class="sub compact-sub">Choose up to 3.</p>':''}<div class="options ${state.step===10?'period-grid':''}">${q.opts.map(o=>`<button class="option ${(q.multi?chosen.includes(o[0]):chosen===o[0])?'chosen':''}" data-v="${o[0]}"><span>${o[1]}</span></button>`).join('')}</div>${q.multi?'<button class="primary compact-primary" id="continue" '+(!chosen.length?'disabled':'')+'>Continue</button>':''}</div>`);document.querySelectorAll('.option').forEach(b=>b.onclick=()=>selectQ(state.step,b.dataset.v));if(q.multi)document.getElementById('continue').onclick=()=>{track('EPOCHQuestionAnswer',{question:q.key,answer:chosen.join(',')});showFeedback(`${chosen.length} interests selected. We’re shaping your premiere.`,()=>{state.step++;render()})}}
