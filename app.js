@@ -2,8 +2,10 @@
 const PIXEL='DAN591JC77U5PB5VV4I0', TOTAL=15;
 const ANALYTICS_ENDPOINT='https://script.google.com/macros/s/AKfycbxytlDVlNt5fTQWK03S8bbmRchTLXzZTqYme70_ax7yRzuADLNl3lahnV3PNm_oq271yQ/exec';
 const qs=new URLSearchParams(location.search), savedArm=localStorage.getItem('epoch_arm'), savedPrice=localStorage.getItem('epoch_price_cell');
-const state={step:1,arm:qs.get('arm')||savedArm||(Math.random()<.7?'paywall':'free'),price:qs.get('price_cell')||savedPrice||(Math.random()<.5?'14.99':'19.99'),answers:{},seen:new Set(),session:crypto.randomUUID?.()||String(Date.now()),email:'',timer:600,processingStarted:false};
-localStorage.setItem('epoch_arm',state.arm);localStorage.setItem('epoch_price_cell',state.price);
+const arm=qs.get('arm')||savedArm||(Math.random()<.7?'paywall':'free');
+const price=arm==='paywall'?(qs.get('price_cell')||savedPrice||(Math.random()<.5?'14.99':'19.99')):'';
+const state={step:1,arm,price,answers:{},seen:new Set(),session:crypto.randomUUID?.()||String(Date.now()),email:'',timer:600,processingStarted:false};
+localStorage.setItem('epoch_arm',state.arm);if(state.arm==='paywall')localStorage.setItem('epoch_price_cell',state.price);else localStorage.removeItem('epoch_price_cell');
 const utm={};['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ttclid'].forEach(k=>{const v=qs.get(k);if(v)localStorage.setItem('epoch_'+k,v);utm[k]=v||localStorage.getItem('epoch_'+k)||''});
 const app=document.getElementById('app');
 const art=n=>`assets/screens/screen-${String(n).padStart(2,'0')}.jpg`;
@@ -66,4 +68,5 @@ function destination(){shell(`<div class="content player"><p class="eyebrow">${s
 firstPartyTrack('PageView',payload());
 render();
 })();
+
 
