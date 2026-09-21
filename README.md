@@ -1,9 +1,9 @@
 # EPOCH v3 funnel foundation
 
-Static Netlify-ready prototype with 70/30 sticky arm allocation plus sticky 50/50 $14.99/$19.99 price-cell assignment within the paywall arm, with crossed-out anchors ($19.99->$14.99 and $24.99->$19.99), quiz, deferred-payment founding-member capture, free arm, confirmation page, three-episode placeholder player, event taxonomy, and UTM persistence.
+Static Netlify-ready prototype with 70/30 sticky arm allocation plus sticky 50/50 $14.99/$19.99 price-cell assignment within the paywall arm, with crossed-out anchors ($19.99->$14.99 and $24.99->$19.99), quiz, deferred-payment founding-member capture, free arm, confirmation page, one live episode player plus two coming-soon episodes, event taxonomy, and UTM persistence.
 
 ## Deploy
-Upload the directory to the existing Netlify site or connect its repository. Replace `placeholder.mp4` with approved creative. Add Microsoft Clarity in the site `<head>` only after a Clarity project ID exists.
+Upload the directory to the existing Netlify site or connect its repository. The approved episode is bundled at `assets/episodes/caesar-ides-of-march-ep1.mp4`. Add Microsoft Clarity in the site `<head>` only after a Clarity project ID exists.
 
 ## Events
 `session_start`, `arm_assigned`, `price_cell_assigned`, `funnel_view`, `quiz_complete`, `price_selected`, `founding_email_submit`, `founding_email_success/error`, `episode_start`, `episode_progress` (25/50/75/100), `episode_replay`, `next_episode_start`, `series_complete`, `session_end`.
