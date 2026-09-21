@@ -1,5 +1,6 @@
 (()=>{
 const PIXEL='DAN591JC77U5PB5VV4I0', TOTAL=15;
+const ANALYTICS_ENDPOINT='https://script.google.com/macros/s/AKfycbxytlDVlNt5fTQWK03S8bbmRchTLXzZTqYme70_ax7yRzuADLNl3lahnV3PNm_oq271yQ/exec';
 const qs=new URLSearchParams(location.search), savedArm=localStorage.getItem('epoch_arm'), savedPrice=localStorage.getItem('epoch_price_cell');
 const state={step:1,arm:qs.get('arm')||savedArm||(Math.random()<.7?'paywall':'free'),price:qs.get('price_cell')||savedPrice||(Math.random()<.5?'14.99':'19.99'),answers:{},seen:new Set(),session:crypto.randomUUID?.()||String(Date.now()),email:'',timer:600,processingStarted:false};
 localStorage.setItem('epoch_arm',state.arm);localStorage.setItem('epoch_price_cell',state.price);
@@ -19,7 +20,15 @@ const data={
 11:{key:'aftertaste',title:'What should you feel after an episode?',opts:[['surprised','“I can’t believe that happened.”','You want history to surprise you.'],['understand','“Now I understand why they did it.”','You want decisions to make sense.'],['debate','“I need to discuss that choice.”','You want questions that stay with you.'],['next','“I have to watch the next episode.”','You want every ending to open another door.']]}
 };
 function payload(extra={}){return{session_id:state.session,arm:state.arm,price_cell:state.price,step:state.step,...utm,...extra}}
-function track(name,extra={}){const p=payload(extra);window.dataLayer=window.dataLayer||[];dataLayer.push({event:name,...p});if(window.ttq?.track)ttq.track(name,p);console.info('[epoch-event]',name,p)}
+function firstPartyTrack(name,p){
+ const event={event_timestamp:new Date().toISOString(),event_name:name,page_url:location.href,...p};
+ const body=JSON.stringify(event);
+ try{
+  if(navigator.sendBeacon&&navigator.sendBeacon(ANALYTICS_ENDPOINT,new Blob([body],{type:'text/plain;charset=UTF-8'})))return;
+ }catch(e){}
+ fetch(ANALYTICS_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=UTF-8'},body}).catch(()=>{});
+}
+function track(name,extra={}){const p=payload(extra);window.dataLayer=window.dataLayer||[];dataLayer.push({event:name,...p});if(window.ttq?.track)ttq.track(name,p);firstPartyTrack(name,p);console.info('[epoch-event]',name,p)}
 function stepView(){const k=`EPOCHQuizStep${String(state.step).padStart(2,'0')}View`;if(!state.seen.has(k)){state.seen.add(k);track(k)}}
 function shell(body){const pct=Math.round((state.step-1)/(TOTAL-1)*100);app.innerHTML=`<section class="screen"><header><button id="back" ${state.step===1?'disabled':''}>←</button><span class="brand">EPOCH</span><span>${state.step}/${TOTAL}</span></header><div class="progress"><i style="width:${pct}%"></i></div>${body}</section>`;document.getElementById('back').onclick=()=>{if(state.step>1){state.step--;render()}};stepView()}
 function showFeedback(message,next){
@@ -54,6 +63,7 @@ function summary(){const anchor=state.price==='14.99'?'19.99':'24.99';shell(`<di
 function tick(){const el=document.getElementById('timer');if(!el)return;el.textContent=`${Math.floor(state.timer/60)}:${String(state.timer%60).padStart(2,'0')}`;if(state.timer-->0)setTimeout(tick,1000)}
 function bindEpisodeTracking(video){const reached=new Set();let started=false,ended=false;video.addEventListener('play',()=>{if(ended){track('episode_replay',{episode:1});ended=false}if(!started){started=true;track('episode_start',{episode:1})}});video.addEventListener('timeupdate',()=>{if(!video.duration)return;const pct=video.currentTime/video.duration*100;[25,50,75].forEach(mark=>{if(pct>=mark&&!reached.has(mark)){reached.add(mark);track('episode_progress',{episode:1,progress:mark})}})});video.addEventListener('ended',()=>{ended=true;if(!reached.has(100)){reached.add(100);track('episode_progress',{episode:1,progress:100})}})}
 function destination(){shell(`<div class="content player"><p class="eyebrow">${state.arm==='paywall'?'FOUNDING PRICE SAVED':'YOUR PREMIERE'}</p><h1>Episode 1: The Gate</h1><video class="video" controls playsinline preload="metadata" poster="${art(15)}"><source src="assets/episodes/caesar-ides-of-march-ep1.mp4" type="video/mp4">Your browser does not support embedded video.</video><button class="primary" id="complete">Complete episode 1</button><div class="coming"><article>Episode 2 <b>Coming soon</b></article><article>Episode 3 <b>Coming soon</b></article></div></div>`);bindEpisodeTracking(document.querySelector('video'));document.getElementById('complete').onclick=()=>{track('series_complete',{available_episodes:1});app.querySelector('.content').innerHTML='<div class="done"><p class="eyebrow">PREMIERE COMPLETE</p><h1>Your next stories are coming soon.</h1><p>We’ll email you when the next episode is ready.</p></div>'}}
+firstPartyTrack('PageView',payload());
 render();
 })();
 
